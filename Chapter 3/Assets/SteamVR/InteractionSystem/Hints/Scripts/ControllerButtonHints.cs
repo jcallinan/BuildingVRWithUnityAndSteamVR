@@ -4,6 +4,7 @@
 //
 //=============================================================================
 
+#if UNITY_UGUI_UI || !UNITY_2019_2_OR_NEWER
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,10 +17,25 @@ namespace Valve.VR.InteractionSystem
 	public class ControllerButtonHints : MonoBehaviour
 	{
 		public Material controllerMaterial;
+		public Material urpControllerMaterial;
+		public Material usingMaterial
+		{
+			get
+			{
+#if UNITY_URP
+				return urpControllerMaterial;
+#else
+				return controllerMaterial;
+#endif
+			}
+		}
+
 		public Color flashColor = new Color( 1.0f, 0.557f, 0.0f );
 		public GameObject textHintPrefab;
 
         public SteamVR_Action_Vibration hapticFlash = SteamVR_Input.GetAction<SteamVR_Action_Vibration>("Haptic");
+
+        public bool autoSetWithControllerRangeOfMotion = true;
 
         [Header( "Debug" )]
 		public bool debugHints = false;
@@ -79,7 +95,12 @@ namespace Valve.VR.InteractionSystem
         void Awake()
 		{
 			renderModelLoadedAction = SteamVR_Events.RenderModelLoadedAction( OnRenderModelLoaded );
+
+#if UNITY_URP
+			colorID = Shader.PropertyToID( "_BaseColor" );
+#else
 			colorID = Shader.PropertyToID( "_Color" );
+#endif
 		}
 
 
@@ -187,7 +208,7 @@ namespace Valve.VR.InteractionSystem
             textHintParent.localScale = Vector3.one;
 
             //Get the button mask for each component of the render model
-            
+
             var renderModels = OpenVR.RenderModels;
             if (renderModels != null)
             {
@@ -448,11 +469,16 @@ namespace Valve.VR.InteractionSystem
 			for ( int i = 0; i < renderers.Count; i++ )
 			{
 				Texture mainTexture = renderers[i].material.mainTexture;
-				renderers[i].sharedMaterial = controllerMaterial;
+				renderers[i].sharedMaterial = usingMaterial;
 				renderers[i].material.mainTexture = mainTexture;
 
 				// This is to poke unity into setting the correct render queue for the model
-				renderers[i].material.renderQueue = controllerMaterial.shader.renderQueue;
+
+#if UNITY_URP
+				renderers[i].material.renderQueue = usingMaterial.renderQueue;
+#else
+				renderers[i].material.renderQueue = usingMaterial.shader.renderQueue;
+#endif
 			}
 
 			for ( int i = 0; i < actions.Length; i++ )
@@ -488,7 +514,7 @@ namespace Valve.VR.InteractionSystem
 		//-------------------------------------------------
 		private void HideButtonHint( params ISteamVR_Action_In_Source[] actions )
 		{
-			Color baseColor = controllerMaterial.GetColor( colorID );
+			Color baseColor = usingMaterial.GetColor( colorID );
 			for ( int i = 0; i < actions.Length; i++ )
 			{
 				if ( actionHintInfos.ContainsKey(actions[i] ) )
@@ -576,7 +602,7 @@ namespace Valve.VR.InteractionSystem
 		{
 			if ( renderModel != null && renderModel.gameObject.activeInHierarchy && flashingRenderers.Count > 0 )
 			{
-				Color baseColor = controllerMaterial.GetColor( colorID );
+				Color baseColor = usingMaterial.GetColor( colorID );
 
 				float flash = ( Time.realtimeSinceStartup - startTime ) * Mathf.PI * 2.0f;
 				flash = Mathf.Cos( flash );
@@ -796,7 +822,13 @@ namespace Valve.VR.InteractionSystem
 			if ( hints != null )
 			{
 				hints.ShowText(action, text, highlightButton );
-			}
+
+                if (hand != null)
+                {
+                    if (hints.autoSetWithControllerRangeOfMotion)
+                        hand.SetTemporarySkeletonRangeOfMotion(SkeletalMotionRangeChange.WithController);
+                }
+            }
 		}
 
 
@@ -807,7 +839,14 @@ namespace Valve.VR.InteractionSystem
 			if ( hints != null )
 			{
 				hints.HideText(action);
-			}
+
+                if (hand != null)
+                {
+                    if (hints.autoSetWithControllerRangeOfMotion)
+                        hand.ResetTemporarySkeletonRangeOfMotion();
+                }
+            }
+
 		}
 
 
@@ -835,3 +874,16 @@ namespace Valve.VR.InteractionSystem
 		}
 	}
 }
+#else
+using UnityEngine;
+namespace Valve.VR.InteractionSystem { public class ControllerButtonHints : MonoBehaviour {
+        public static void ShowButtonHint(Hand hand, params ISteamVR_Action_In_Source[] actions) { }
+        public static void HideButtonHint(Hand hand, params ISteamVR_Action_In_Source[] actions) { }
+        public static void HideAllButtonHints(Hand hand) { }
+        public static bool IsButtonHintActive(Hand hand, ISteamVR_Action_In_Source action) { return false; }
+        public static void ShowTextHint(Hand hand, ISteamVR_Action_In_Source action, string text, bool highlightButton = true) { }
+        public static void HideTextHint(Hand hand, ISteamVR_Action_In_Source action) { }
+        public static void HideAllTextHints(Hand hand) { }
+        public static string GetActiveHintText(Hand hand, ISteamVR_Action_In_Source action) { return null; }
+    } }
+#endif

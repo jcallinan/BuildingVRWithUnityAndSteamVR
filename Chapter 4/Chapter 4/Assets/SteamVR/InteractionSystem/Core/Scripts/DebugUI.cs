@@ -5,7 +5,6 @@
 //=============================================================================
 
 using UnityEngine;
-using UnityEngine.UI;
 using System.Collections;
 
 namespace Valve.VR.InteractionSystem
@@ -37,15 +36,15 @@ namespace Valve.VR.InteractionSystem
 		}
 
 
-		//-------------------------------------------------
-		private void OnGUI()
+#if !HIDE_DEBUG_UI
+        //-------------------------------------------------
+        private void OnGUI()
 		{
             if (Debug.isDebugBuild)
             {
-#if !HIDE_DEBUG_UI
                 player.Draw2DDebug();
-#endif
             }
-		}
-	}
+        }
+#endif
+    }
 }

@@ -1,4 +1,11 @@
-﻿using System.Collections;
+﻿//======= Copyright (c) Valve Corporation, All rights reserved. ===============
+//
+// Purpose: UIElement that responds to VR hands and generates UnityEvents
+//
+//=============================================================================
+
+#if UNITY_UGUI_UI || !UNITY_2019_2_OR_NEWER
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -32,13 +39,13 @@ namespace Valve.VR.InteractionSystem.Sample
         public Vector2 ui_fillAngles;
 
         public Transform resetToPoint;
-        
+
         public SteamVR_Action_Vector2 actionSteering = SteamVR_Input.GetAction<SteamVR_Action_Vector2>("buggy", "Steering");
-        
+
         public SteamVR_Action_Single actionThrottle = SteamVR_Input.GetAction<SteamVR_Action_Single>("buggy", "Throttle");
-        
+
         public SteamVR_Action_Boolean actionBrake = SteamVR_Input.GetAction<SteamVR_Action_Boolean>("buggy", "Brake");
-        
+
         public SteamVR_Action_Boolean actionReset = SteamVR_Input.GetAction<SteamVR_Action_Boolean>("buggy", "Reset");
 
         private float usteer;
@@ -173,3 +180,7 @@ namespace Valve.VR.InteractionSystem.Sample
         }
     }
 }
+#else
+using UnityEngine;
+namespace Valve.VR.InteractionSystem.Sample { public class BuggyController : MonoBehaviour {} }
+#endif
